@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent any
 
@@ -27,21 +26,15 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DH_USER',
-                        passwordVariable: 'DH_PASS'
-                    )
-                ]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DH_USER',
+                    passwordVariable: 'DH_PASS'
+                )]) {
                     sh '''
                         set -eu
-
-                        echo "$DH_PASS" | docker login \
-                            -u "$DH_USER" --password-stdin
-
+                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
                         docker push "$IMAGE"
-
                         docker logout
                     '''
                 }
@@ -50,24 +43,16 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'kubeconfig-file',
-                        variable: 'KUBECONFIG'
-                    )
-                ]) {
+                withCredentials([file(
+                    credentialsId: 'kubeconfig-file',
+                    variable: 'KUBECONFIG'
+                )]) {
                     sh '''
                         set -eu
-
                         kubectl apply -f deployment.yaml
                         kubectl apply -f service.yaml
-
-                        kubectl set image deployment/python-demo \
-                            python-demo="$IMAGE"
-
-                        kubectl rollout status \
-                            deployment/python-demo \
-                            --timeout=180s
+                        kubectl set image deployment/python-demo python-demo="$IMAGE"
+                        kubectl rollout status deployment/python-demo --timeout=180s
                     '''
                 }
             }
@@ -75,15 +60,12 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'kubeconfig-file',
-                        variable: 'KUBECONFIG'
-                    )
-                ]) {
+                withCredentials([file(
+                    credentialsId: 'kubeconfig-file',
+                    variable: 'KUBECONFIG'
+                )]) {
                     sh '''
                         set -eu
-
                         kubectl get deployment python-demo
                         kubectl get pods -o wide
                         kubectl get service python-demo
@@ -93,4 +75,3 @@ pipeline {
         }
     }
 }
-```
